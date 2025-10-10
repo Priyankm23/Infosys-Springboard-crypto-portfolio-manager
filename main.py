@@ -37,7 +37,6 @@ def rolling_volatility(prices, window_size):
         volatilities.append(round(vol, 2))
     return volatilities
 
-
 def trading_signals(prices):
     changes = percent_change(prices)
     signals=[]
@@ -50,7 +49,6 @@ def trading_signals(prices):
             signals.append("HOLD")
     return signals
 
-
 def portfolio_return(assetA, assetB, wA=0.5, wB=0.2):
     returns = []
     for a, b in zip(assetA, assetB):
@@ -59,14 +57,14 @@ def portfolio_return(assetA, assetB, wA=0.5, wB=0.2):
     return returns
 
 
-def task(symbol, table):
-    conn = sqlite3.connect("db/crypto.db", check_same_thread=False)
-    query = f"SELECT Unix, Close FROM {table} ORDER BY Unix;"  
-    df = pd.read_sql(query, conn)
-    conn.close()
-
+def task(symbol, df):
+    df['Close'] = pd.to_numeric(df['Close'], errors='coerce')
     prices = df['Close'].tolist()
-    dates = df['Unix'].tolist()
+    if 'Date' in df.columns:
+        df['date'] = pd.to_datetime(df['Date'], dayfirst=True)
+        dates = df['date'].tolist()
+    elif 'Unix' in df.columns:
+        dates = df['Unix'].tolist()
 
     # Calculate metrics
     pchanges = percent_change(prices)
@@ -91,30 +89,48 @@ def task(symbol, table):
     return daily_df
 
 
-def run_metric_calculation(coins=[("BTC", "btc_prices"), ("ETH", "eth_prices")]):
+def run_metric_calculation(uploaded_data=None, coins=[("BTC", "btc_prices"), ("ETH", "eth_prices")]):
     """
     Calculates and stores technical metrics for a given list of coins.
     Returns a dictionary with a status message and the calculated dataframes.
     """
-    with ThreadPoolExecutor(max_workers=len(coins)) as executor:
-        results = list(executor.map(lambda args: task(*args), coins))
+    if uploaded_data:
+        with ThreadPoolExecutor(max_workers=len(uploaded_data)) as executor:
+            results = list(executor.map(lambda item: task(item[0], item[1]), uploaded_data.items()))
         
-    conn = sqlite3.connect("db/crypto.db")
-    messages = []
-    dataframes = {}
-    for df in results:
-        if not df.empty:
-            symbol = df['symbol'].iloc[0]
-            df.to_sql("crypto_metrics", conn, if_exists="append", index=False)
-            message = f"Inserted {len(df)} rows of metrics for {symbol} into the database."
-            print(message)
-            messages.append(message)
-            dataframes[symbol] = df
-    conn.close()
-    
-    final_message = "\n".join(messages)
-    print("\nAll daily metrics stored in crypto_metrics table using parallel tasking!")
-    return {"message": final_message, "dataframes": dataframes}
+        dataframes = {}
+        for df in results:
+            if not df.empty:
+                symbol = df['symbol'].iloc[0]
+                dataframes[symbol] = df
+        return {"message": "Metrics calculated for uploaded data.", "dataframes": dataframes}
+    else:
+        def db_task(symbol, table):
+            conn = sqlite3.connect("db/crypto.db", check_same_thread=False)
+            query = f"SELECT Unix, Close FROM {table} ORDER BY Unix;"  
+            df = pd.read_sql(query, conn)
+            conn.close()
+            return task(symbol, df)
+
+        with ThreadPoolExecutor(max_workers=len(coins)) as executor:
+            results = list(executor.map(lambda args: db_task(*args), coins))
+            
+        conn = sqlite3.connect("db/crypto.db")
+        messages = []
+        dataframes = {}
+        for df in results:
+            if not df.empty:
+                symbol = df['symbol'].iloc[0]
+                df.to_sql("crypto_metrics", conn, if_exists="append", index=False)
+                message = f"Inserted {len(df)} rows of metrics for {symbol} into the database."
+                print(message)
+                messages.append(message)
+                dataframes[symbol] = df
+        conn.close()
+        
+        final_message = "\n".join(messages)
+        print("\nAll daily metrics stored in crypto_metrics table using parallel tasking!")
+        return {"message": final_message, "dataframes": dataframes}
 
 if __name__ == "__main__":
     output = run_metric_calculation()

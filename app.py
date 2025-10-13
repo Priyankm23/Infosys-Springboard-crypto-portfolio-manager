@@ -124,27 +124,39 @@ def run_investment_strategy_page():
 
 
 # ------------------ PREDICTIONS ------------------ #
+
 def run_predictions_page():
-    st.header("Return Prediction with Regression Model")
+    st.header("📈 Return Prediction with Regression Model")
+
+    # Use the uploaded data from session state
+    uploaded_data = st.session_state.uploaded_data
+
+    if not uploaded_data:
+        st.warning("Please upload at least one cryptocurrency CSV file using the sidebar uploader.")
+        return
 
     if st.button("Run Prediction Models"):
         with st.spinner("Training models and making predictions..."):
-            output = run_predictor()
-            st.success("Prediction models ran successfully!")
+            try:
+                # Pass the already uploaded data directly
+                output = run_predictor(uploaded_data)
+                st.success("✅ Prediction models ran successfully!")
 
-            st.subheader("Prediction Results")
-            for res in output['results']:
-                st.markdown(f"**{res['label']}**")
+                st.subheader("📊 Prediction Results")
+                for res in output['results']:
+                    st.markdown(f"### {res['label']}")
+                    col1, col2 = st.columns(2)
+                    col1.metric("Test R² Score", f"{res['test_r2']:.4f}" if res['test_r2'] is not None else "N/A")
+                    col2.metric("Test MSE", f"{res['test_mse']:.6f}" if res['test_mse'] is not None else "N/A")
+                    col1.metric("Last Actual Return", f"{res['last_actual']:.4%}")
+                    col2.metric("Last Predicted Return", f"{res['last_predicted']:.4%}")
 
-                col1, col2 = st.columns(2)
-                col1.metric("Test R² Score", f"{res['test_r2']:.4f}")
-                col2.metric("Test MSE", f"{res['test_mse']:.6f}")
-                col1.metric("Last Actual Return", f"{res['last_actual']:.4%}")
-                col2.metric("Last Predicted Return", f"{res['last_predicted']:.4%}")
+                st.subheader("📉 Actual vs. Predicted Plots")
+                for fig in output['figures']:
+                    st.pyplot(fig)
 
-            st.subheader("Actual vs. Predicted Plots")
-            for fig in output['figures']:
-                st.pyplot(fig)
+            except Exception as e:
+                st.error(f"Error during prediction: {e}")
 
 
 # ------------------ RISK CHECKER ------------------ #

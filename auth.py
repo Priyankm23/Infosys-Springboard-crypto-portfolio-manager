@@ -2,7 +2,7 @@ import sqlite3
 import hashlib
 
 def init_user_db():
-    conn = sqlite3.connect('user.db')
+    conn = sqlite3.connect('db/user.db')
     c = conn.cursor()
     c.execute("""
         CREATE TABLE IF NOT EXISTS users (
@@ -19,7 +19,7 @@ def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
 def add_user(name, email, password):
-    conn = sqlite3.connect('user.db')
+    conn = sqlite3.connect('db/user.db')
     c = conn.cursor()
     try:
         c.execute("INSERT INTO users (name, email, password) VALUES (?, ?, ?)", (name, email, hash_password(password)))
@@ -31,7 +31,7 @@ def add_user(name, email, password):
         conn.close()
 
 def check_user(email, password):
-    conn = sqlite3.connect('user.db')
+    conn = sqlite3.connect('db/user.db')
     c = conn.cursor()
     c.execute("SELECT password FROM users WHERE email = ?", (email,))
     stored_password = c.fetchone()

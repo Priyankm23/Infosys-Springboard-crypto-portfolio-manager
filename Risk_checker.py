@@ -4,11 +4,6 @@ import numpy as np
 import smtplib
 from email.mime.text import MIMEText
 from datetime import datetime
-from dotenv import load_dotenv
-import os
-
-# Load .env file
-load_dotenv()
 
 # ==== CONFIG ====
 DB_PATH = "db/crypto.db"
@@ -22,11 +17,11 @@ THRESHOLDS = {
 }
 
 # Email setup
-SMTP_SERVER = os.getenv("SMTP_SERVER")
-SMTP_PORT = os.getenv("SMTP_PORT")
-EMAIL_USER = os.getenv("EMAIL_USER")
-EMAIL_PASS = os.getenv("EMAIL_PASS")
-ALERT_TO = os.getenv("ALERT_TO")
+SMTP_SERVER = "smtp.gmail.com"
+SMTP_PORT = 587
+EMAIL_USER = "priyankmoradia34@gmail.com"
+EMAIL_PASS = "jqrbhwkwdvztjhuz"
+ALERT_TO = "2023002327.gcet@cvmu.edu.in"
 
 def fetch_data(uploaded_data=None):
     """Fetch Close prices from all asset tables or uploaded data."""

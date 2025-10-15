@@ -6,7 +6,7 @@ import sqlite3
 from DB_portfolio import init_db
 from portfolio_math import run_and_plot_strategy
 from predictor import main as run_predictor
-from investment_rule import run_investment_strategy
+from investment_rule1 import run_investment_strategy
 from Risk_checker import run_risk_check
 from main import run_metric_calculation
 from auth import init_user_db, add_user, check_user

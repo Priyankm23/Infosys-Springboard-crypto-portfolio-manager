@@ -146,20 +146,27 @@ def run_predictions_page():
                 for res in output['results']:
                     st.markdown(f"### {res['label']}")
 
-                    # prepare formatted strings safely (avoid inline conditional in format spec)
-                    test_r2_str = f"{res['test_r2']:.4f}" if (res.get('test_r2') is not None and not np.isnan(res.get('test_r2'))) else "N/A"
-                    train_r2_str = f"{res['train_r2']:.4f}" if (res.get('train_r2') is not None and not np.isnan(res.get('train_r2'))) else "N/A"
-                    test_mse_str = f"{res['test_mse']:.6f}" if (res.get('test_mse') is not None and not np.isnan(res.get('test_mse'))) else "N/A"
+                    # safely format numeric values
+                    def safe_format(value, fmt):
+                        if value is None or (isinstance(value, float) and np.isnan(value)):
+                            return "N/A"
+                        return format(value, fmt)
 
-                    last_actual_pct = res['last_actual'] if res.get('last_actual') is not None else 0.0
-                    last_predicted_pct = res['last_predicted'] if res.get('last_predicted') is not None else 0.0
+                    test_r2_str = safe_format(res.get('test_r2'), ".4f")
+                    train_r2_str = safe_format(res.get('train_r2'), ".4f")
+                    test_mse_str = safe_format(res.get('test_mse'), ".6f")
+
+                    last_actual_pct = res.get('last_actual', 0.0)
+                    last_predicted_pct = res.get('last_predicted', 0.0)
+                    next_day_predicted_pct = res.get('next_day_predicted', 0.0)  # 🔹 NEW
 
                     # --- Display Returns (Bigger Font) ---
                     st.markdown(
                         f"""
-                        <div style='font-size:20px; font-weight:700; margin-bottom:6px;'>
-                            Last Actual Return: <span style='color:green;'>{last_actual_pct:.4%}</span><br>
-                            Last Predicted Return: <span style='color:blue;'>{last_predicted_pct:.4%}</span>
+                        <div style='font-size:20px; font-weight:700; margin-bottom:8px;'>
+                            Last Actual Return: <span style='color:#0CED88;'>{last_actual_pct:.4%}</span><br>
+                            Last Predicted Return: <span style='color:#0c84ed;'>{last_predicted_pct:.4%}</span><br>
+                            Next Day Predicted Return: <span style='color:#0CBCED;'>{next_day_predicted_pct:.4%}</span>
                         </div>
                         """,
                         unsafe_allow_html=True
@@ -168,7 +175,7 @@ def run_predictions_page():
                     # --- Display Scores (Smaller Font) ---
                     st.markdown(
                         f"""
-                        <div style='font-size:13px; color:#444; margin-bottom:10px;'>
+                        <div style='font-size:13px; color:#F3E736; margin-bottom:10px;'>
                             <b>Scores:</b>&nbsp;
                             Test R² = {test_r2_str} &nbsp;|&nbsp;
                             Train R² = {train_r2_str} &nbsp;|&nbsp;
@@ -181,7 +188,6 @@ def run_predictions_page():
                 # --- Display Actual vs Predicted Plots ---
                 st.subheader("📉 Actual vs. Predicted Plots")
                 for fig in output.get('figures', []):
-                    # Some fig objects may be None or invalid; guard against that
                     if fig is not None:
                         st.pyplot(fig)
 
@@ -191,7 +197,8 @@ def run_predictions_page():
                     <hr>
                     <div style='font-size:14px; color:#444; background-color:#fff8f0; padding:12px; border-radius:8px;'>
                         ⚠️ <b>Disclaimer:</b> These predictions are computed by statistical models using historical price data.
-                        They do not consider news, macro events, liquidity, or other market factors. <b>Do not rely solely on these outputs for trading decisions.</b>
+                        They do not consider news, macro events, liquidity, or other market factors. 
+                        <b>Do not rely solely on these outputs for trading decisions.</b>
                         Use them for research and educational purposes only.
                     </div>
                     """,

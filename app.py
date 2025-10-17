@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 import sqlite3
 
 # Import refactored functions
@@ -128,7 +129,6 @@ def run_investment_strategy_page():
 def run_predictions_page():
     st.header("📈 Return Prediction with Regression Model")
 
-    # Use the uploaded data from session state
     uploaded_data = st.session_state.uploaded_data
 
     if not uploaded_data:
@@ -138,26 +138,68 @@ def run_predictions_page():
     if st.button("Run Prediction Models"):
         with st.spinner("Training models and making predictions..."):
             try:
-                # Pass the already uploaded data directly
                 output = run_predictor(uploaded_data)
                 st.success("✅ Prediction models ran successfully!")
 
                 st.subheader("📊 Prediction Results")
+
                 for res in output['results']:
                     st.markdown(f"### {res['label']}")
-                    col1, col2 = st.columns(2)
-                    col1.metric("Test R² Score", f"{res['test_r2']:.4f}" if res['test_r2'] is not None else "N/A")
-                    col2.metric("Test MSE", f"{res['test_mse']:.6f}" if res['test_mse'] is not None else "N/A")
-                    col1.metric("Last Actual Return", f"{res['last_actual']:.4%}")
-                    col2.metric("Last Predicted Return", f"{res['last_predicted']:.4%}")
 
+                    # prepare formatted strings safely (avoid inline conditional in format spec)
+                    test_r2_str = f"{res['test_r2']:.4f}" if (res.get('test_r2') is not None and not np.isnan(res.get('test_r2'))) else "N/A"
+                    train_r2_str = f"{res['train_r2']:.4f}" if (res.get('train_r2') is not None and not np.isnan(res.get('train_r2'))) else "N/A"
+                    test_mse_str = f"{res['test_mse']:.6f}" if (res.get('test_mse') is not None and not np.isnan(res.get('test_mse'))) else "N/A"
+
+                    last_actual_pct = res['last_actual'] if res.get('last_actual') is not None else 0.0
+                    last_predicted_pct = res['last_predicted'] if res.get('last_predicted') is not None else 0.0
+
+                    # --- Display Returns (Bigger Font) ---
+                    st.markdown(
+                        f"""
+                        <div style='font-size:20px; font-weight:700; margin-bottom:6px;'>
+                            Last Actual Return: <span style='color:green;'>{last_actual_pct:.4%}</span><br>
+                            Last Predicted Return: <span style='color:blue;'>{last_predicted_pct:.4%}</span>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+
+                    # --- Display Scores (Smaller Font) ---
+                    st.markdown(
+                        f"""
+                        <div style='font-size:13px; color:#444; margin-bottom:10px;'>
+                            <b>Scores:</b>&nbsp;
+                            Test R² = {test_r2_str} &nbsp;|&nbsp;
+                            Train R² = {train_r2_str} &nbsp;|&nbsp;
+                            Test MSE = {test_mse_str}
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+
+                # --- Display Actual vs Predicted Plots ---
                 st.subheader("📉 Actual vs. Predicted Plots")
-                for fig in output['figures']:
-                    st.pyplot(fig)
+                for fig in output.get('figures', []):
+                    # Some fig objects may be None or invalid; guard against that
+                    if fig is not None:
+                        st.pyplot(fig)
+
+                # --- Disclaimer ---
+                st.markdown(
+                    """
+                    <hr>
+                    <div style='font-size:14px; color:#444; background-color:#fff8f0; padding:12px; border-radius:8px;'>
+                        ⚠️ <b>Disclaimer:</b> These predictions are computed by statistical models using historical price data.
+                        They do not consider news, macro events, liquidity, or other market factors. <b>Do not rely solely on these outputs for trading decisions.</b>
+                        Use them for research and educational purposes only.
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
 
             except Exception as e:
                 st.error(f"Error during prediction: {e}")
-
 
 # ------------------ RISK CHECKER ------------------ #
 def check_risk_page():

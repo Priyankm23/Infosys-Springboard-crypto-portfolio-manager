@@ -1,4 +1,4 @@
-# Crypto Investment Manager
+# Crypto Portfolio Manager
 
 This project provides a comprehensive suite of tools for managing and analyzing cryptocurrency investments. It automates data collection, portfolio construction, risk assessment, and performance analysis, enabling users to make data-driven investment decisions.
 
